@@ -1,19 +1,23 @@
 ########Initial workspace setup#######
 setwd("c:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
 SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_Code_data.csv"))#calls dataset 
-SR_data = SR_data[order(SR_data$site),]# sorts data set by site 
+#SR_data = droplevels(SR_data[-which(SR_data$site == "utrib"),])
+#SR_data$value = log(SR_data$value)
 options(scipen=999)
-#SR_data = droplevels(SR_data[-which(SR_data$site == "KYR"),])
-#SR_data = droplevels(SR_data[-which(SR_data$site == "STR"),])
-#SR_data = droplevels(SR_data[-which(SR_data$site == "GRR"),])
+
 
 ########## Calls in Packages####### 
+library(car) #regession utilities
 library(lme4)# linearmodels 
 library(lmerTest)# added utility to linear models 
 library(lsmeans)
 library(dplyr)# data manipulator 
 library(moments)# used to calculate skewness and kurtosis 
-library(car)
+library(e1071)
+######### arrange the data############
+SR_data$month = factor(SR_data$month, levels = c("may", "june", "july", "aug", "sept", "oct"))# forces the ordering(levels) of month to be logical rather than alphabetical
+SR_data = arrange(SR_data,site,year,month)# sorts data set by site,month,year
+
 #########User specified functions########## 
 se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
 
@@ -25,10 +29,10 @@ Descriptive_stats = summarise(group_by(SR_data,site),
                               SD = sd(value), 
                               SE = se(value), 
                               Median = median(value), 
-                              Skewmness = skewness(value), 
-                              Kurtosis = kurtosis(value), 
-                              Fifth_percentile= quantile(value, probs = percentile[1])) 
-
+                              Skewness = skewness(value, type = 2), 
+                              Kurtosis = kurtosis(value, type = 2), 
+                              Fifth_percentile= quantile(value, probs = percentile[1], type = 2), 
+                              Ninety_Fifth_percentile= quantile(value, probs = percentile[2], type = 2)) 
 ##########Test assumptions of normality and homoscedasticity- mix of proc univariate and glm bartlett test#########
 temp_norm = shapiro.test(SR_data$value)# normality test 
 P = data.frame(temp_norm$p.value) 
@@ -36,7 +40,7 @@ W = data.frame(temp_norm$statistic)
 Shapiro_wilks_norm = data.frame(W,P)# puts normality test into dataframe
 colnames(Shapiro_wilks_norm) = c("W","P")# give variables logical names
 
-temp_var = bartlett.test(logvalue ~ site, data = SR_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
+temp_var = bartlett.test(value ~ site, data = SR_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
 P_B = data.frame(temp_var$p.value)
 K = data.frame(temp_var$statistic)
 Bartlett_Homogen_var = data.frame(K, P_B)# puts homogeniety test into dataframe
