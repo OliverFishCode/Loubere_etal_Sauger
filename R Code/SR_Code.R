@@ -13,11 +13,10 @@ library(lmerTest)# added utility to linear models
 library(lsmeans)
 library(dplyr)# data manipulator 
 library(moments)# used to calculate skewness and kurtosis 
-<<<<<<< HEAD
 library(e1071)
-=======
 
->>>>>>> master
+
+
 ######### arrange the data############
 SR_data$month = factor(SR_data$month, levels = c("may", "june", "july", "aug", "sept", "oct"))# forces the ordering(levels) of month to be logical rather than alphabetical
 SR_data = arrange(SR_data,site,year,month)# sorts data set by site,month,year
@@ -33,13 +32,10 @@ Descriptive_stats = summarise(group_by(SR_data,site),
                               SD = sd(value), 
                               SE = se(value), 
                               Median = median(value), 
-<<<<<<< HEAD
                               Skewness = skewness(value, type = 2), 
                               Kurtosis = kurtosis(value, type = 2), 
-=======
                               Skewmness = skewness(value), 
                               Kurtosis = kurtosis(value), 
->>>>>>> master
                               Fifth_percentile= quantile(value, probs = percentile[1], type = 2), 
                               Ninety_Fifth_percentile= quantile(value, probs = percentile[2], type = 2)) 
 ##########Test assumptions of normality and homoscedasticity- mix of proc univariate and glm bartlett test#########
