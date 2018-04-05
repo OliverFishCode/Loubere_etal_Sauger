@@ -38,6 +38,20 @@ Descriptive_stats = summarise(group_by(SR_data,site),
                               Kurtosis = kurtosis(value, type = 2), 
                               Fifth_percentile= quantile(value, probs = percentile[1], type = 2), 
                               Ninety_Fifth_percentile= quantile(value, probs = percentile[2], type = 2)) 
+remove(se, percentile)
+
+########Add 5th and 95th percentile to data for predictions##########
+value = Descriptive_stats$Fifth_percentile
+site = Descriptive_stats$site
+year = ""
+month = ""
+Site_low = data.frame(value, site, month, year)
+Site_low$site = plyr::revalue(Site_low$site,c("cumb"="lcumb", "mmr"="lmmr", "ohio"="lohio", "tenn"="ltenn", "twr"="ltwr", "union"="lunion", "utrib"="lutrib", "wab"="lwab"))
+value = Descriptive_stats$Ninety_Fifth_percentile
+Site_high = data.frame(value, site, month, year)
+Site_high$site = plyr::revalue(Site_high$site,c("cumb"="ucumb", "mmr"="ummr", "ohio"="uohio", "tenn"="utenn", "twr"="utwr", "union"="uunion", "utrib"="uutrib", "wab"="uwab"))
+SR_data_bounds = rbind(SR_data, Site_high, Site_low)
+remove(Site_high,Site_low, month, site, value,year)
 
 ##########Test assumptions of normality and homoscedasticity- mix of proc univariate and glm bartlett test#########
 temp_norm = shapiro.test(SR_data$value)# normality test 
@@ -53,9 +67,10 @@ Bartlett_Homogen_var = data.frame(K, P_B)# puts homogeniety test into dataframe
 colnames(Bartlett_Homogen_var) = c("K","P")# give variables logical names
 remove(P,W,temp_norm,temp_var,K,P_B)# cleans up work environment to point
 
-#################Linear model##############
+#################Linear Model##############
 Sr_site_lm = glm(value ~ site, SR_data, family = "gaussian")
 summary(Sr_site_lm)
+lm_summary =broom::tidy(Sr_site_lm)
 glm_sum = summary(Sr_site_lm)
 resid_df = as.numeric(glm_sum$df.residual)
 null_df = as.numeric(glm_sum$df.null)
@@ -64,17 +79,25 @@ mse = glm_sum$deviance/resid_df
 Model_F_stat = msr/mse
 P_or_F = data.frame(2 * pf(q=Model_F_stat, df1=(null_df - resid_df), df2=(resid_df), lower.tail=FALSE))
 Model_F_test = data.frame(Model_F_stat,P_or_F)
+CL_lm = broom::confint_tidy(Sr_site_lm, conf.level=0.95)
+temp_eemeans = emmeans(Sr_site_lm,"site")
+tukey_pairwise = broom::tidy(contrast(temp_eemeans, method="pairwise", adjust = "tukey" ))
+lm_summary = data.frame(lm_summary,CL_lm)
+remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,temp_eemeans,CL_lm)
 
-confint(Sr_site_lm, level=0.95)
-lsmeans(Sr_site_lm,pairwise~site)
-#####Prediction Intervals from glm#######
-preds = predict.glm(Sr_site_lm,type="link", se.fit = TRUE)
+############Linear Mixed Model############
+
+#######Linear Mixed Model with AR(1) R-side error correction########
+
+#####Prediction Intervals for otolith to water *****place holder#######
+preds = predict.glm( Sr_site_lm,type="link", se.fit = TRUE)
 critval <- 1.96 ## approx 95% CI
 upr <- preds$fit + (critval * preds$se.fit)
 lwr <- preds$fit - (critval * preds$se.fit)
 fit <- preds$fit
-preds = data.frame(fit,lwr,upr)
-#################Wilcoxon model##############
+preds = data.frame(fit,upr,lwr, SR_data$site)
+
+#################Wilcoxon model  code included to provide non-parametric example ############## 
 #kruskal.test(value~site, SR_data)
 #pairwise.wilcox.test(SR_data$value, SR_data$site,p.adjust.method = "bonferroni" )
 
