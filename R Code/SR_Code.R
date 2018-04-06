@@ -83,7 +83,11 @@ CL_lm = broom::confint_tidy(Sr_site_lm, conf.level=0.95)# 95% clm on linear coef
 temp_eemeans = emmeans(Sr_site_lm,"site")# creats marginal means object
 tukey_pairwise = broom::tidy(contrast(temp_eemeans, method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
 lm_summary = data.frame(lm_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
+<<<<<<< HEAD
 remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,temp_eemeans,CL_lm)# cleans up work environment to point
+=======
+remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,temp_eemeans,CL_lm)
+>>>>>>> master
 
 ############Linear Mixed Model############
 
