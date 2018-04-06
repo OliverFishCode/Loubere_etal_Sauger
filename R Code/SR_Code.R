@@ -28,19 +28,19 @@ se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error
 
 ##########Basic descriptive statistics-my R equivalent to SAS proc univariate ######### 
 percentile = c(0.05,0.95)# Percentiles of interest 
-Descriptive_stats = summarise(group_by(SR_data,site), 
+Descriptive_stats = summarise(group_by(SR_data,site),# applys following statistics by group 
                               Mean = mean(value), 
                               N = length(value), 
                               SD = sd(value), 
                               SE = se(value), 
                               Median = median(value), 
                               Skewness = skewness(value, type = 2), 
-                              Kurtosis = kurtosis(value, type = 2), 
-                              Fifth_percentile= quantile(value, probs = percentile[1], type = 2), 
+                              Kurtosis = kurtosis(value, type = 2), # type 2 corrisponds to the same estimations method used by sas
+                              Fifth_percentile= quantile(value, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
                               Ninety_Fifth_percentile= quantile(value, probs = percentile[2], type = 2)) 
-remove(se, percentile)
+remove(se, percentile)# cleans up work environment to point
 
-########Add 5th and 95th percentile to data for predictions##########
+########Add 5th and 95th percentile values to data for predictions##########
 value = Descriptive_stats$Fifth_percentile
 site = Descriptive_stats$site
 year = ""
@@ -51,7 +51,7 @@ value = Descriptive_stats$Ninety_Fifth_percentile
 Site_high = data.frame(value, site, month, year)
 Site_high$site = plyr::revalue(Site_high$site,c("cumb"="ucumb", "mmr"="ummr", "ohio"="uohio", "tenn"="utenn", "twr"="utwr", "union"="uunion", "utrib"="uutrib", "wab"="uwab"))
 SR_data_bounds = rbind(SR_data, Site_high, Site_low)
-remove(Site_high,Site_low, month, site, value,year)
+remove(Site_high,Site_low, month, site, value,year)# cleans up work environment to point
 
 ##########Test assumptions of normality and homoscedasticity- mix of proc univariate and glm bartlett test#########
 temp_norm = shapiro.test(SR_data$value)# normality test 
@@ -68,21 +68,21 @@ colnames(Bartlett_Homogen_var) = c("K","P")# give variables logical names
 remove(P,W,temp_norm,temp_var,K,P_B)# cleans up work environment to point
 
 #################Linear Model##############
-Sr_site_lm = glm(value ~ site, SR_data, family = "gaussian")
-summary(Sr_site_lm)
-lm_summary =broom::tidy(Sr_site_lm)
-glm_sum = summary(Sr_site_lm)
-resid_df = as.numeric(glm_sum$df.residual)
-null_df = as.numeric(glm_sum$df.null)
-msr = (glm_sum$null.deviance - glm_sum$deviance)/(null_df - resid_df)
-mse = glm_sum$deviance/resid_df
-Model_F_stat = msr/mse
-P_or_F = data.frame(2 * pf(q=Model_F_stat, df1=(null_df - resid_df), df2=(resid_df), lower.tail=FALSE))
-Model_F_test = data.frame(Model_F_stat,P_or_F)
-CL_lm = broom::confint_tidy(Sr_site_lm, conf.level=0.95)
-temp_eemeans = emmeans(Sr_site_lm,"site")
-tukey_pairwise = broom::tidy(contrast(temp_eemeans, method="pairwise", adjust = "tukey" ))
-lm_summary = data.frame(lm_summary,CL_lm)
+Sr_site_lm = glm(value ~ site, SR_data, family = "gaussian")# linear model to test differences in value by site
+summary(Sr_site_lm)# prints summary of linear coefficients and significance 
+lm_summary =broom::tidy(Sr_site_lm)# summary in a pretty dataframe
+glm_sum = summary(Sr_site_lm)# creates summary variable
+resid_df = as.numeric(glm_sum$df.residual)# extracts and creates residual df variable
+null_df = as.numeric(glm_sum$df.null)# extracts and creates model df variable
+msr = (glm_sum$null.deviance - glm_sum$deviance)/(null_df - resid_df)# calculates mean square regression
+mse = glm_sum$deviance/resid_df# calculates mean square error
+Model_F_stat = msr/mse# calculates F value
+P_or_F = data.frame(2 * pf(q=Model_F_stat, df1=(null_df - resid_df), df2=(resid_df), lower.tail=FALSE))# 2-tail probability of F
+Model_F_test = data.frame(Model_F_stat,P_or_F)# puts F test in dataframe
+CL_lm = broom::confint_tidy(Sr_site_lm, conf.level=0.95)# 95% clm on linear coefficients
+temp_eemeans = emmeans(Sr_site_lm,"site")# creats marginal means object
+tukey_pairwise = broom::tidy(contrast(temp_eemeans, method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
+lm_summary = data.frame(lm_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
 remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,temp_eemeans,CL_lm)
 
 ############Linear Mixed Model############
