@@ -1,10 +1,10 @@
 ########Initial workspace setup#######
 setwd("c:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
-SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_Code_data.csv"))#calls dataset 
+SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_Code_data.csv"))#calls SR_water dataset 
+known_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Knowns.csv"))#calls Knowns dataset 
 #SR_data = droplevels(SR_data[-which(SR_data$site == "utrib"),])# removes utrib to test effects on normality and homogeniety
 #SR_data$value = log(SR_data$value)# natural log of response if needed
 options(scipen=999)
-
 
 ########## Calls in Packages####### 
 library(car) #regession utilities
@@ -21,6 +21,7 @@ library(multcompView)# tukey groups
 SR_data$month = factor(SR_data$month, levels = c("may", "june", "july", "aug", "sept", "oct"))# forces the ordering(levels) of month to be logical rather than alphabetical
 SR_data$year= factor(SR_data$year, levels = c("2013", "2014", "2015", "2016", "2017"))# forces the ordering(levels) of year and makes it descrete rather than continuous
 SR_data = arrange(SR_data,site,year,month)# sorts data set by site,month,year
+colnames(known_data) = c("water","otolith","site")
 
 #########User specified functions########## 
 se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
@@ -40,33 +41,47 @@ Descriptive_stats = summarise(group_by(SR_data,site),# applys following statisti
 remove(se, percentile)# cleans up work environment to point
 
 ########Add 5th and 95th percentile values to data for predictions##########
-value = Descriptive_stats$Fifth_percentile# the next four lines create variables for data site_low
+otolith = ""
+water = Descriptive_stats$Fifth_percentile# the next four lines create variables for data site_low
 site = Descriptive_stats$site
-year = ""
-month = ""
-Site_low = data.frame(value, site, month, year)# creates new data set site_low
-Site_low$site = plyr::revalue(Site_low$site,c("cumb"="lcumb", "mmr"="lmmr", "ohio"="lohio", "tenn"="ltenn", "twr"="ltwr", "union"="lunion", "utrib"="lutrib", "wab"="lwab"))# applys unique variable names to 5th percentile values
-value = Descriptive_stats$Ninety_Fifth_percentile# creates variable with levels containing 95 percentile water values by site
-Site_high = data.frame(value, site, month, year)# creates new data set site_high
-Site_high$site = plyr::revalue(Site_high$site,c("cumb"="ucumb", "mmr"="ummr", "ohio"="uohio", "tenn"="utenn", "twr"="utwr", "union"="uunion", "utrib"="uutrib", "wab"="uwab"))# applys unique variable names to 95th percentile values
-SR_data_bounds = rbind(SR_data, Site_high, Site_low)# combines site_low and site_high into
-remove(Site_high,Site_low, month, site, value,year)# cleans up work environment to point
+Site_low = data.frame(water, otolith, site)# creates new data set site_low
+Site_low$site = plyr::revalue(Site_low$site,c("cumb"="lcumb", "mmr"="lmmr", "ohio"="lohio", "tenn"="ltenn", "twr"="ltwr", "union"="lunion", "utrib"="lutrib", "wab"="lwab", "emb"="lemb", "white"="lwhite"))# applys unique variable names to 5th percentile values
+
+water = Descriptive_stats$Ninety_Fifth_percentile# creates variable with levels containing 95 percentile water values by site
+Site_high = data.frame(water, otolith, site)# creates new data set site_high
+Site_high$site = plyr::revalue(Site_high$site,c("cumb"="ucumb", "mmr"="ummr", "ohio"="uohio", "tenn"="utenn", "twr"="utwr", "union"="uunion", "utrib"="uutrib", "wab"="uwab", "emb"="uemb", "white"="uwhite"))# applys unique variable names to 95th percentile values
+SR_reg_data = rbind(known_data, Site_high, Site_low)# combines site_low and site_high into knowns data set
+SR_reg_data$otolith = as.numeric(SR_reg_data$otolith)# changes values from character to numeric
+remove(Site_high,Site_low, water, site, otolith, known_data)# cleans up work environment to point
 
 ##########Test assumptions of normality and homoscedasticity- mix of proc univariate and glm bartlett test#########
 temp_norm = shapiro.test(SR_data$value)# normality test 
 P = data.frame(temp_norm$p.value)# temporary variable to contain P
 W = data.frame(temp_norm$statistic)# temporary variable to contain w statistic
-Shapiro_wilks_norm = data.frame(W,P)# puts normality test output into dataframe
-colnames(Shapiro_wilks_norm) = c("W","P")# give variables logical names
+Shapiro_wilks_water = data.frame(W,P)# puts normality test output into dataframe
+colnames(Shapiro_wilks_water) = c("W","P")# give variables logical names
+
+temp_norm = shapiro.test(SR_reg_data$otolith)# normality test 
+P = data.frame(temp_norm$p.value)# temporary variable to contain P
+W = data.frame(temp_norm$statistic)# temporary variable to contain w statistic
+Shapiro_wilks_knowns = data.frame(W,P)# puts normality test output into dataframe
+colnames(Shapiro_wilks_knowns) = c("W","P")# give variables logical names
+
 
 temp_var = bartlett.test(value ~ site, data = SR_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
 P_B = data.frame(temp_var$p.value)# temporary variable to contain P
 K = data.frame(temp_var$statistic)# temporary variable to contain k statistic
-Bartlett_Homogen_var = data.frame(K, P_B)# puts homogeniety test into dataframe
-colnames(Bartlett_Homogen_var) = c("K","P")# give variables logical names
+Bartlett_Homogen_water = data.frame(K, P_B)# puts homogeniety test into dataframe
+colnames(Bartlett_Homogen_water) = c("K","P")# give variables logical names
+
+temp_var = bartlett.test(otolith ~ water, data = SR_reg_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
+P_B = data.frame(temp_var$p.value)# temporary variable to contain P
+K = data.frame(temp_var$statistic)# temporary variable to contain k statistic
+Bartlett_Homogen_knowns = data.frame(K, P_B)# puts homogeniety test into dataframe
+colnames(Bartlett_Homogen_knowns) = c("K","P")# give variables logical names
 remove(P,W,temp_norm,temp_var,K,P_B)# cleans up work environment to point
 
-#################Linear Model##############
+#################Linear Model- includes f-test for overall model##############
 Sr_site_lm = glm(value ~ site, SR_data, family = "gaussian")# linear model to test differences in value by site
 summary(Sr_site_lm)# prints summary of linear coefficients and significance 
 lm_summary =broom::tidy(Sr_site_lm)# summary in a pretty dataframe
@@ -101,15 +116,38 @@ cld(temp_eemeans2)
 remove(temp_eemeans2,temp_eemeans,temporal_CL_lm,Sr_temporal_lm,temp_sum)# cleans up work environment to point
 
 
+#################Knowns Linear Model- includes f-test for overall model##############
+Sr_oto_water = glm(otolith ~ water, data = SR_reg_data, family = "Gamma")# linear model to test differences in value by site
+summary(Sr_oto_water)# prints summary of linear coefficients and significance 
+reg_summary =broom::tidy(Sr_oto_water)# summary in a pretty dataframe
+glm_sum = summary(Sr_oto_water)# creates summary variable
+resid_df = as.numeric(glm_sum$df.residual)# extracts and creates residual df variable
+null_df = as.numeric(glm_sum$df.null)# extracts and creates model df variable
+msr = (glm_sum$null.deviance - glm_sum$deviance)/(null_df - resid_df)# calculates mean square regression
+mse = glm_sum$deviance/resid_df# calculates mean square error
+Model_F_stat = msr/mse# calculates F value
+P_or_F = data.frame(2 * pf(q=Model_F_stat, df1=(null_df - resid_df), df2=(resid_df), lower.tail=FALSE))# 2-tail probability of F
+r2 = 1- (Sr_oto_water$deviance/Sr_oto_water$null.deviance)
+known_reg_fandr2 = data.frame(Model_F_stat,P_or_F,r2)# puts F test in dataframe
+colnames(known_reg_fandr2) = c("F value","P", "R2")# give variables logical names
+CL_lm = broom::confint_tidy(Sr_oto_water, conf.level=0.95)# 95% clm on linear coefficients
+water_reg_summary = data.frame(reg_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
+remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,CL_lm,reg_summary)# cleans up work environment to point
 
-#####Prediction Intervals for otolith to water *****place holder#######
-#preds = predict.glm( Sr_site_lm,type="link", se.fit = TRUE)
-#critval <- 1.96 ## approx 95% CI
-#upr <- preds$fit + (critval * preds$se.fit)
-#lwr <- preds$fit - (critval * preds$se.fit)
-#fit <- preds$fit
-#preds = data.frame(fit,upr,lwr, SR_data$site)
-
+#####Prediction Intervals for otolith to water#######
+preds = predict.glm( Sr_oto_water, newdata = SR_reg_data, type = "response", se.fit = TRUE)
+critval <- 1.96 ## approx 95% CI
+upr <- preds$fit + (critval * preds$se.fit)
+lwr <- preds$fit - (critval * preds$se.fit)
+fit <- preds$fit
+preds = data.frame(fit,lwr,upr,SR_reg_data$site, SR_reg_data$water, SR_reg_data$otolith)
+colnames(preds) = c("Prediction","LCL", "UCL", "Site","Water","Otolith")# give variables logical names
+preds = arrange(preds, Prediction,Water)# sorts data set by site,month,year
+plot(otolith~water, SR_reg_data)
+abline(Sr_oto_water)
+lines(preds$Water,preds$Prediction, col="red",lty=2,lwd=3)
+lines(preds$Water,preds$LCL,col="blue",lty=2,lwd=3)
+lines(preds$Water,preds$UCL,  col="blue",lty=2,lwd=3)
 #################Wilcoxon model  code included to provide non-parametric example ############## 
 #kruskal.test(value~site, SR_data)
 #pairwise.wilcox.test(SR_data$value, SR_data$site,p.adjust.method = "bonferroni" )
