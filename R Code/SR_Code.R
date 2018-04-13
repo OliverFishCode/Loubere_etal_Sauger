@@ -2,7 +2,8 @@
 setwd("c:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
 SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_Code_data.csv"))#calls SR_water dataset 
 known_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Knowns.csv"))#calls Knowns dataset 
-#SR_data = droplevels(SR_data[-which(SR_data$site == "utrib"),])# removes utrib to test effects on normality and homogeniety
+known_data = droplevels(known_data[-which(known_data$site == "SD"),])# removes SD to test effects on normality and homogeniety
+#known_data = droplevels(known_data[-which(known_data$site == "kank"),])# removes kank to test effects on normality and homogeniety
 #SR_data$value = log(SR_data$value)# natural log of response if needed
 options(scipen=999)
 
@@ -25,7 +26,7 @@ colnames(known_data) = c("water","otolith","site")
 
 #########User specified functions########## 
 se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
-
+x = inverse.gaussian(link="inverse")# easy to use inverse link
 ##########Basic descriptive statistics-my R equivalent to SAS proc univariate ######### 
 percentile = c(0.05,0.95)# Percentiles of interest 
 Descriptive_stats = summarise(group_by(SR_data,site),# applys following statistics by group 
@@ -134,7 +135,7 @@ CL_lm = broom::confint_tidy(Sr_oto_water, conf.level=0.95)# 95% clm on linear co
 water_reg_summary = data.frame(reg_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
 remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,CL_lm,reg_summary)# cleans up work environment to point
 
-#####Prediction Intervals for otolith to water#######
+#####Prediction Intervals for otolith to water- response scale#######
 preds = predict.glm( Sr_oto_water, newdata = SR_reg_data, type = "response", se.fit = TRUE)
 critval <- 1.96 ## approx 95% CI
 upr <- preds$fit + (critval * preds$se.fit)
@@ -148,6 +149,24 @@ abline(Sr_oto_water)
 lines(preds$Water,preds$Prediction, col="red",lty=2,lwd=3)
 lines(preds$Water,preds$LCL,col="blue",lty=2,lwd=3)
 lines(preds$Water,preds$UCL,  col="blue",lty=2,lwd=3)
+#####Prediction Intervals for otolith to water- link scale#######
+oto_inverse =  data.frame(x$linkfun(SR_reg_data$otolith))
+colnames(oto_inverse) = c("inverse_oto")# give variables logical names
+SR_reg_data = data.frame(SR_reg_data, oto_inverse)
+preds_link = predict.glm( Sr_oto_water, newdata = SR_reg_data, type = "link", se.fit = TRUE)
+critval <- 1.96 ## approx 95% CI
+upr <- preds_link$fit + (critval * preds_link$se.fit)
+lwr <- preds_link$fit - (critval * preds_link$se.fit)
+fit <- preds_link$fit
+preds_link = data.frame(fit,lwr,upr,SR_reg_data$site, SR_reg_data$water, SR_reg_data$otolith)
+colnames(preds_link) = c("Prediction","LCL", "UCL", "Site","Water","Otolith")# give variables logical names
+preds_link = arrange(preds_link, Prediction,Water)# sorts data set by site,month,year
+plot(inverse_oto~water, SR_reg_data)
+abline(Sr_oto_water)
+lines(preds_link$Water,preds_link$Prediction, col="red",lty=2,lwd=3)
+lines(preds_link$Water,preds_link$LCL,col="blue",lty=2,lwd=3)
+lines(preds_link$Water,preds_link$UCL,  col="blue",lty=2,lwd=3)
+remove(x, critval,fit,lwr,r2,upr)
 #################Wilcoxon model  code included to provide non-parametric example ############## 
 #kruskal.test(value~site, SR_data)
 #pairwise.wilcox.test(SR_data$value, SR_data$site,p.adjust.method = "bonferroni" )
