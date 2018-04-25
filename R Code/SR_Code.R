@@ -1,8 +1,9 @@
 ########Initial workspace setup#######
-setwd("c:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
-SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_Code_data.csv"))#calls SR_water dataset 
+setwd("c:/Users/olive/Google Drive/recruitment manuscript")#sets working directory 
+SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/recruitment manuscript/Sr_water_data.csv"))#calls SR_water dataset 
 known_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Knowns.csv"))#calls Knowns dataset 
 known_data = droplevels(known_data[-which(known_data$site == "SD"),])# removes SD to test effects on normality and homogeniety
+SR_data = droplevels(known_data[-which(SR_data$site == "SD"),])# removes SD to test effects on normality and homogeniety
 #known_data = droplevels(known_data[-which(known_data$site == "kank"),])# removes kank to test effects on normality and homogeniety
 #SR_data$value = log(SR_data$value)# natural log of response if needed
 options(scipen=999)
