@@ -1,9 +1,9 @@
 ########Initial workspace setup#######
-setwd("c:/Users/olive/Google Drive/recruitment manuscript")#sets working directory 
-SR_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/recruitment manuscript/Sr_water_data.csv"))#calls SR_water dataset 
-known_data = data.frame(read.csv(file="c:/Users/olive/Google Drive/Alex_data_and_SAS_files/Knowns.csv"))#calls Knowns dataset 
+setwd("C:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
+SR_data = data.frame(read.csv(file="C:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_water_data.csv"))#calls SR_water dataset 
+known_data = data.frame(read.csv(file="C:/Users/olive/Google Drive/Alex_data_and_SAS_files/Knowns.csv"))#calls Knowns dataset 
 known_data = droplevels(known_data[-which(known_data$site == "SD"),])# removes SD to test effects on normality and homogeniety
-SR_data = droplevels(known_data[-which(SR_data$site == "SD"),])# removes SD to test effects on normality and homogeniety
+SR_data = droplevels(SR_data[-which(SR_data$site == "sal"),])# removes SD to test effects on normality and homogeniety
 #known_data = droplevels(known_data[-which(known_data$site == "kank"),])# removes kank to test effects on normality and homogeniety
 #SR_data$value = log(SR_data$value)# natural log of response if needed
 options(scipen=999)
@@ -21,7 +21,7 @@ library(multcompView)# tukey groups
 
 ######### arrange the data############
 SR_data$month = factor(SR_data$month, levels = c("may", "june", "july", "aug", "sept", "oct"))# forces the ordering(levels) of month to be logical rather than alphabetical
-SR_data$year= factor(SR_data$year, levels = c("2013", "2014", "2015", "2016", "2017"))# forces the ordering(levels) of year and makes it descrete rather than continuous
+SR_data$year= factor(SR_data$year, levels = c("2012", "2013", "2014", "2015", "2016", "2017"))# forces the ordering(levels) of year and makes it descrete rather than continuous
 SR_data = arrange(SR_data,site,year,month)# sorts data set by site,month,year
 colnames(known_data) = c("water","otolith","site")# fixes column names
 
@@ -69,7 +69,6 @@ P = data.frame(temp_norm$p.value)# temporary variable to contain P
 W = data.frame(temp_norm$statistic)# temporary variable to contain w statistic
 Shapiro_wilks_knowns = data.frame(W,P)# puts normality test output into dataframe
 colnames(Shapiro_wilks_knowns) = c("W","P")# give variables logical names
-
 
 temp_var = bartlett.test(value ~ site, data = SR_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
 P_B = data.frame(temp_var$p.value)# temporary variable to contain P
@@ -172,4 +171,3 @@ remove(x, critval,fit,lwr,r2,upr)# cleans up work environment
 #################Wilcoxon model  code included to provide non-parametric example ############## 
 #kruskal.test(value~site, SR_data)
 #pairwise.wilcox.test(SR_data$value, SR_data$site,p.adjust.method = "bonferroni" )
-
