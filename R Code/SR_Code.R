@@ -136,21 +136,8 @@ CL_lm = broom::confint_tidy(Sr_oto_water, conf.level=0.95)# 95% clm on linear co
 water_reg_summary = data.frame(reg_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
 remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,CL_lm,reg_summary)# cleans up work environment to point
 
-#####Prediction Intervals for otolith to water- response scale (this is what you care about)#######
-preds = predict.glm( Sr_oto_water, newdata = SR_reg_data, type = "response", se.fit = TRUE)# use the knowns regression to make predictions from  5th and 95th percentile water, also provides  std. error
-critval <- 1.96 # critical value for approx 95% CI
-upr <- preds$fit + (critval * preds$se.fit)# estimate upper CI for prediction
-lwr <- preds$fit - (critval * preds$se.fit)# estimate lower CI for prediction
-fit <- preds$fit# returns fited value
-preds = data.frame(fit,lwr,upr,SR_reg_data$site, SR_reg_data$water, SR_reg_data$otolith)# puts predictions, CI, site ,and measured otolith and water values in a single dataframe
-colnames(preds) = c("Prediction","LCL", "UCL", "Site","Water","Otolith")# give variables logical names
-preds = arrange(preds, Prediction,Water)# sorts data set by site,month,year
-plot(otolith~water, SR_reg_data)# plots measured water and otolith values on response scale
-lines(preds$Water,preds$Prediction, col="red",lty=2,lwd=3)# adds fitted line
-lines(preds$Water,preds$LCL,col="blue",lty=2,lwd=3)# adds UCL line
-lines(preds$Water,preds$UCL,  col="blue",lty=2,lwd=3)# adds LCL line
 
-#####Prediction Intervals for otolith to water- link scale#######
+#####Prediction Intervals for otolith to water- response(use response scaled) and link scale#######
 oto_inverse =  data.frame(x$linkfun(SR_reg_data$otolith))
 colnames(oto_inverse) = c("inverse_oto")# give variables logical names
 SR_reg_data = data.frame(SR_reg_data, oto_inverse)
@@ -159,13 +146,20 @@ critval <- 1.96 # critical value for approx 95% CI
 upr <- preds_link$fit + (critval * preds_link$se.fit)# estimate upper CI for prediction
 lwr <- preds_link$fit - (critval * preds_link$se.fit)# estimate lower CI for prediction
 fit <- preds_link$fit# returns fited value
-preds_link = data.frame(fit,lwr,upr,SR_reg_data$site, SR_reg_data$water, SR_reg_data$otolith)# puts predictions, CI, site ,and measured otolith and water values in a single dataframe
-colnames(preds_link) = c("Prediction","LCL", "UCL", "Site","Water","Otolith")# give variables logical names
+lwr2 <-Sr_oto_water$family$linkinv(upr)
+upr2 <-Sr_oto_water$family$linkinv(lwr)
+fit2 <-Sr_oto_water$family$linkinv(fit)
+preds_link = data.frame(fit2,lwr2,upr2,fit,lwr,upr,SR_reg_data$site, SR_reg_data$water, SR_reg_data$otolith)# puts predictions, CI, site ,and measured otolith and water values in a single dataframe
+colnames(preds_link) = c("Prediction","LCL", "UCL","Link_Prediction","Link_LCL", "Link_UCL", "Site","Water","Otolith")# give variables logical names
 preds_link = arrange(preds_link, Prediction,Water)# sorts data set by site,month,year
-plot(inverse_oto~water, SR_reg_data)# plots measured water and otolith values on link scale
+plot(otolith~water, SR_reg_data)# plots measured water and otolith values on link scale
 lines(preds_link$Water,preds_link$Prediction, col="red",lty=2,lwd=3)# adds fitted line
 lines(preds_link$Water,preds_link$LCL,col="blue",lty=2,lwd=3)# adds LCL line
 lines(preds_link$Water,preds_link$UCL,  col="blue",lty=2,lwd=3)# adds UCL line
+plot(inverse_oto~water, SR_reg_data)# plots measured water and otolith values on link scale
+lines(preds_link$Water,preds_link$Link_Prediction, col="red",lty=2,lwd=3)# adds fitted line
+lines(preds_link$Water,preds_link$Link_LCL,col="blue",lty=2,lwd=3)# adds LCL line
+lines(preds_link$Water,preds_link$Link_UCL,  col="blue",lty=2,lwd=3)# adds UCL line
 remove(x, critval,fit,lwr,r2,upr)# cleans up work environment
 
 #################Wilcoxon model  code included to provide non-parametric example ############## 
