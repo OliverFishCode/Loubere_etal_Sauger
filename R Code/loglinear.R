@@ -14,9 +14,11 @@ library(dplyr)# data manipulator
 library(e1071)# addition math functions and utility; allows for adjustments in kurtosis and skewness calc. to match SAS
 library(multcompView)# tukey groups
 library(AER)
+library(MASS)
+library(DHARMa)
 
 ######### arrange the data############
-colnames(loglin_data) = c("count","pool","year","origin")# fixes column names
+colnames(loglin_data) = c("count","pool","origin")# fixes column names
 
 #########User specified functions########## 
 se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
@@ -40,29 +42,21 @@ remove(se, percentile)# cleans up work environment to point
 levenetest_origin = leveneTest(loglin_data$count,loglin_data$origin) #levene homogeniety of variance test r; requires atleast 2 values per group 
 levenetest_pool = leveneTest(loglin_data$count,loglin_data$pool) #levene test is used instead of bartletts because its robust to non-normal data
 
+
 #################loglinear Linear Model- includes f-test for overall model##############
-Sauger_loglin = glm(count ~ pool + origin + origin*pool, loglin_data, family = "poisson")# linear model to test differences in value by site
-Sauger_null = glm(count ~ 1, loglin_data, family = "poisson")
+Sauger_loglin = glm(count ~ pool + origin + origin*pool, loglin_data, family="poisson")# linear model to test differences in value by site
+Sauger_null = glm(count ~ 1, loglin_data,family="poisson")
+loglin_sim = simulateResiduals(Sauger_loglin,refit = T, n=99)
+plotSimulatedResiduals(loglin_sim)
 loglin_model_p = with(anova(Sauger_null,Sauger_loglin),pchisq(Deviance,Df,lower.tail=FALSE)[2]) 
-overdispersion_test = dispersiontest(Sauger_loglin)#overdispersion test,you can also divide resid deviance by resid df
+overdispersion_test = dispersiontest(Sauger_loglin)#overdispersion test poisson only,you can also divide resid deviance by resid df
 summary(Sauger_loglin)# prints summary of linear coefficients and significance 
 loglin_summary =broom::tidy(Sauger_loglin)# summary in a pretty dataframe
 CL_lm = broom::confint_tidy(Sauger_loglin, conf.level=0.95)# 95% clm on linear coefficients
 temp_eemeans = emmeans(Sauger_loglin,"origin", by="pool")# creats marginal means object
-tukey_pairwise_lm = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
+tukey_pairwise_loglin = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
 cld_sum = cld(temp_eemeans)
-plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
-loglin_summary = data.frame(lm_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
-remove(CL_lm,Sauger_loglin)# cleans up work environment to point
-
-
-#########compare multi-comp outcomes#######
-# plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
-# plot(temp_eemeans2, comparisons =TRUE)# Pairwise comaparisons plot for the temporal autocorrelation linear model
-# cld(temp_eemeans)# compact letter display (tukey groupings) for basic linear model
-# cld(temp_eemeans2)# compact letter display (tukey groupings) for temporal autocorrelation linear model
-# remove(temp_eemeans2,temp_eemeans,temporal_CL_lm,Sr_temporal_lm,temp_sum)# cleans up work environment to point
-# 
-# 
-
+plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model, throws minor  error in ploting
+loglin_summary = data.frame(loglin_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
+remove(CL_lm,Sauger_loglin,Sauger_null,temp_eemeans, loglin_sim)# cleans up work environment to point
 
