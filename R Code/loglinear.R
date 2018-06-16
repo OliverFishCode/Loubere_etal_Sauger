@@ -13,9 +13,9 @@ library(emmeans)# adds SAS like lsmeans functionality
 library(dplyr)# data manipulator 
 library(e1071)# addition math functions and utility; allows for adjustments in kurtosis and skewness calc. to match SAS
 library(multcompView)# tukey groups
-library(AER)
+library(AER)#dispersioncheck
 library(MASS)
-library(DHARMa)
+library(DHARMa)#simulated qq check
 
 ######### arrange the data############
 colnames(loglin_data) = c("count","pool","origin")# fixes column names
@@ -38,7 +38,7 @@ Descriptive_stats = summarise(group_by(loglin_data,pool),# applys following stat
 remove(se, percentile)# cleans up work environment to point
 
 
-##########Test assumptions homoscedasticity- mix of proc univariate and glm bartlett test#########
+##########Test assumptions homoscedasticity- mix of proc univariate and glm levene test#########
 levenetest_origin = leveneTest(loglin_data$count,loglin_data$origin) #levene homogeniety of variance test r; requires atleast 2 values per group 
 levenetest_pool = leveneTest(loglin_data$count,loglin_data$pool) #levene test is used instead of bartletts because its robust to non-normal data
 

@@ -1,10 +1,6 @@
 ########Initial workspace setup#######
 setwd("C:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
-SR_data = data.frame(read.csv(file="C:/Users/olive/Google Drive/Alex_data_and_SAS_files/Sr_water_data.csv"))#calls SR_water dataset 
-known_data = data.frame(read.csv(file="C:/Users/olive/Google Drive/Alex_data_and_SAS_files/Knowns.csv"))#calls Knowns dataset 
-known_data = droplevels(known_data[-which(known_data$site == "SD"),])# removes SD to test effects on normality and homogeniety
-SR_data = droplevels(SR_data[-which(SR_data$site == "sal"),])# removes SD to test effects on normality and homogeniety
-#known_data = droplevels(known_data[-which(known_data$site == "kank"),])# removes kank to test effects on normality and homogeniety
+logistic_data = data.frame(read.csv(file="C:/Users/olive/Google Drive/Alex_data_and_SAS_files/movement_data.csv"))#calls loglin dataset 
 #SR_data$value = log(SR_data$value)# natural log of response if needed
 options(scipen=999)
 
@@ -17,71 +13,52 @@ library(emmeans)# adds SAS like lsmeans functionality
 library(dplyr)# data manipulator 
 library(e1071)# addition math functions and utility; allows for adjustments in kurtosis and skewness calc. to match SAS
 library(multcompView)# tukey groups
-
+library(MASS)
+library(DHARMa)#simulated qq check
 
 ######### arrange the data############
-SR_data$month = factor(SR_data$month, levels = c("may", "june", "july", "aug", "sept", "oct"))# forces the ordering(levels) of month to be logical rather than alphabetical
-SR_data$year= factor(SR_data$year, levels = c("2012", "2013", "2014", "2015", "2016", "2017"))# forces the ordering(levels) of year and makes it descrete rather than continuous
-SR_data = arrange(SR_data,site,year,month)# sorts data set by site,month,year
-colnames(known_data) = c("water","otolith","site")# fixes column names
+colnames(logistic_data) = c("id","age","inside","outside","yearclass","year","origin","pool")# fixes column names
+logistic_data$age = factor(logistic_data$age, levels = c("0", "1", "2", "3", "4"))# makes age a factor and forces ordering
+logistic_data$year= factor(logistic_data$year, levels = c("2010", "2011", "2012", "2013", "2014", "2015"))# forces the ordering(levels) of year and makes it descrete rather than continuous
+logistic_data$yearclass= factor(logistic_data$yearclass, levels = c("2010", "2011", "2012", "2013", "2014", "2015"))# forces the ordering(levels) of yearclass and makes it descrete rather than continuous
+logistic_data = arrange(logistic_data,pool,origin,id,yearclass,year)# sorts data set by site,month,year
 
 #########User specified functions########## 
 se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
-x = inverse.gaussian(link="inverse")# easy to use inverse link not the same as inverse of link
 
-##########Basic descriptive statistics-my R equivalent to SAS proc univariate ######### 
+##########Basic descriptive statistics of inside movement-my R equivalent to SAS proc univariate ######### 
 percentile = c(0.05,0.95)# Percentiles of interest 
-Descriptive_stats = summarise(group_by(SR_data,site),# applys following statistics by group 
-                              Mean = mean(value), 
-                              N = length(value),# number of observations
-                              SD = sd(value),# standard deviation 
-                              SE = se(value),# standard error 
-                              Median = median(value), 
-                              Skewness = skewness(value, type = 2),# type 2 corrisponds to the same estimations method used by sas 
-                              Kurtosis = kurtosis(value, type = 2),# type 2 corrisponds to the same estimations method used by sas
-                              Fifth_percentile= quantile(value, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
-                              Ninety_Fifth_percentile= quantile(value, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
+Descriptive_stats_inside = summarise(group_by(logistic_data,age),# applys following statistics by group 
+                              Mean = mean(inside), 
+                              N = length(inside),# number of observations
+                              SD = sd(inside),# standard deviation 
+                              SE = se(inside),# standard error 
+                              Median = median(inside), 
+                              Skewness = skewness(inside, type = 2),# type 2 corrisponds to the same estimations method used by sas 
+                              Kurtosis = kurtosis(inside, type = 2),# type 2 corrisponds to the same estimations method used by sas
+                              Fifth_percentile= quantile(inside, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
+                              Ninety_Fifth_percentile= quantile(inside, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
+
+Descriptive_stats_outside = summarise(group_by(logistic_data,age),# applys following statistics by group 
+                                     Mean = mean(outside), 
+                                     N = length(outside),# number of observations
+                                     SD = sd(outside),# standard deviation 
+                                     SE = se(outside),# standard error 
+                                     Median = median(outside), 
+                                     Skewness = skewness(outside, type = 2),# type 2 corrisponds to the same estimations method used by sas 
+                                     Kurtosis = kurtosis(outside, type = 2),# type 2 corrisponds to the same estimations method used by sas
+                                     Fifth_percentile= quantile(outside, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
+                                     Ninety_Fifth_percentile= quantile(outside, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
+
+levenetest_origin = leveneTest(logistic_data$outside, logistic_data$origin) #levene homogeniety of variance test r; requires atleast 2 values per group 
+levenetest_pool = leveneTest(loglin_data$count,loglin_data$pool) #levene test is used instead of bartletts because its robust to non-normal data
+leventest_age = leveneTest()
+
+
+
 remove(se, percentile)# cleans up work environment to point
 
-########Add 5th and 95th percentile values to data for predictions##########
-otolith = ""# filler for ottolith values i.e., creates variable column so that the new data set has same dimensions as known_data and they can be appended
-water = Descriptive_stats$Fifth_percentile# creates variable with levels containing 5th percentile water values by site
-site = Descriptive_stats$site# adds site variable
-Site_low = data.frame(water, otolith, site)# creates new data set site_low
-Site_low$site = plyr::revalue(Site_low$site,c("cumb"="lcumb", "mmr"="lmmr", "ohio"="lohio", "tenn"="ltenn", "twr"="ltwr", "union"="lunion", "utrib"="lutrib", "wab"="lwab", "emb"="lemb", "white"="lwhite"))# applys unique variable names to 5th percentile values
 
-water = Descriptive_stats$Ninety_Fifth_percentile# creates variable with levels containing 95th percentile water values by site
-Site_high = data.frame(water, otolith, site)# creates new data set site_high
-Site_high$site = plyr::revalue(Site_high$site,c("cumb"="ucumb", "mmr"="ummr", "ohio"="uohio", "tenn"="utenn", "twr"="utwr", "union"="uunion", "utrib"="uutrib", "wab"="uwab", "emb"="uemb", "white"="uwhite"))# applys unique variable names to 95th percentile values
-SR_reg_data = rbind(known_data, Site_high, Site_low)# combines site_low and site_high into knowns data set
-SR_reg_data$otolith = as.numeric(SR_reg_data$otolith)# changes values from character to numeric
-remove(Site_high,Site_low, water, site, otolith, known_data)# cleans up work environment to point
-
-##########Test assumptions of normality and homoscedasticity- mix of proc univariate and glm bartlett test#########
-temp_norm = shapiro.test(SR_data$value)# normality test 
-P = data.frame(temp_norm$p.value)# temporary variable to contain P
-W = data.frame(temp_norm$statistic)# temporary variable to contain w statistic
-Shapiro_wilks_water = data.frame(W,P)# puts normality test output into dataframe
-colnames(Shapiro_wilks_water) = c("W","P")# give variables logical names
-
-temp_norm = shapiro.test(SR_reg_data$otolith)# normality test 
-P = data.frame(temp_norm$p.value)# temporary variable to contain P
-W = data.frame(temp_norm$statistic)# temporary variable to contain w statistic
-Shapiro_wilks_knowns = data.frame(W,P)# puts normality test output into dataframe
-colnames(Shapiro_wilks_knowns) = c("W","P")# give variables logical names
-
-temp_var = bartlett.test(value ~ site, data = SR_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
-P_B = data.frame(temp_var$p.value)# temporary variable to contain P
-K = data.frame(temp_var$statistic)# temporary variable to contain k statistic
-Bartlett_Homogen_water = data.frame(K, P_B)# puts homogeniety test into dataframe
-colnames(Bartlett_Homogen_water) = c("K","P")# give variables logical names
-
-temp_var = bartlett.test(otolith ~ water, data = SR_reg_data) #Bartletts homogeniety of variance test r; requires atleast 2 values per group 
-P_B = data.frame(temp_var$p.value)# temporary variable to contain P
-K = data.frame(temp_var$statistic)# temporary variable to contain k statistic
-Bartlett_Homogen_knowns = data.frame(K, P_B)# puts homogeniety test into dataframe
-colnames(Bartlett_Homogen_knowns) = c("K","P")# give variables logical names
-remove(P,W,temp_norm,temp_var,K,P_B)# cleans up work environment to point
 
 #################Water Linear Model- includes f-test for overall model##############
 Sr_site_lm = glm(value ~ site, SR_data, family = "gaussian")# linear model to test differences in value by site
