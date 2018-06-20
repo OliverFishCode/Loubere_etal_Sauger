@@ -1,5 +1,6 @@
 ########Initial workspace setup#######
 setwd("C:/Users/olive/Google Drive/Alex_data_and_SAS_files")#sets working directory 
+ptm = proc.time()
 logistic_data = data.frame(read.csv(file="C:/Users/olive/Google Drive/Alex_data_and_SAS_files/movement_data.csv"))#calls loglin dataset 
 options(scipen=999)
 
@@ -17,7 +18,7 @@ library(MuMIn)
 
 ######### arrange the data############
 colnames(logistic_data) = c("id","age","inside","outside","yearclass","year","origin","pool")# fixes column names
-logistic_data$age = factor(logistic_data$age, levels = c("0", "1", "2", "3", "4"))# makes age a factor and forces ordering
+logistic_data$age = factor(logistic_data$age, levels = c("0", "1", "2"))# makes age a factor and forces ordering
 logistic_data$year= factor(logistic_data$year, levels = c("2010", "2011", "2012", "2013", "2014", "2015"))# forces the ordering(levels) of year and makes it descrete rather than continuous
 logistic_data$yearclass= factor(logistic_data$yearclass, levels = c("2010", "2011", "2012", "2013", "2014", "2015"))# forces the ordering(levels) of yearclass and makes it descrete rather than continuous
 logistic_data = arrange(logistic_data,pool,origin,id,yearclass,year)# sorts data set by site,month,year
@@ -53,9 +54,25 @@ remove(se, percentile)# cleans up work environment to point
 
 
 
-#################logistic outside- includes f-test for overall model##############
-Sauger_ = glmer(outside ~ pool + origin + origin*pool +(1|id), data=logistic_data, family="binomial")# linear model to test differences in value by site
-summary(Sauger_)
+#################logistic outside##############
+options(na.action = "na.fail")   #  prevent fitting models to different datasets
+Sauger_out_idr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
+dredge(Sauger_out_idr, trace=2)
+Sauger_out_ycr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
+dredge(Sauger_out_ycr, trace=2)
+Sauger_out_nest =  glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass/id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
+dredge(Sauger_out_nest, trace=2)
+
+proc.time()-ptm
+# summary(Sauger_out)
+# sum_temp = summary(Sauger_out)
+# logistic_sum_out = data.frame(sum_temp$coefficients)
+
+#################logistic inside##############
+# Sauger_in = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id)+(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
+# summary(Sauger_in)
+# sum_temp = summary(Sauger_in)
+# logistic_sum_in = data.frame(sum_temp$coefficients)
 
 # #########compare multi-comp outcomes#######
 # plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
