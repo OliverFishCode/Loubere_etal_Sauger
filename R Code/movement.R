@@ -15,6 +15,7 @@ library(e1071)# addition math functions and utility; allows for adjustments in k
 library(multcompView)# tukey groups
 library(MASS)
 library(MuMIn)
+library(optimx)
 
 ######### arrange the data############
 colnames(logistic_data) = c("id","age","inside","outside","yearclass","year","origin","pool")# fixes column names
@@ -62,6 +63,16 @@ Sauger_out_ycr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age
 dredge(Sauger_out_ycr, trace=2)
 Sauger_out_nest =  glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass/id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
 dredge(Sauger_out_nest, trace=2)
+
+#################logistic inside##############
+options(na.action = "na.fail")   #  prevent fitting models to different datasets
+Sauger_out_idr = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "optimx",optCtrl=list(method= "L-BFGS-B", maxfun=100000)))# logistic model to test differences in value by site
+dredge(Sauger_out_idr, trace=2)
+Sauger_out_ycr = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "optimx",optCtrl=list(method= "L-BFGS-B", maxfun=100000)))# logistic model to test differences in value by site
+dredge(Sauger_out_ycr, trace=2)
+Sauger_out_nest =  glm(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin, data=logistic_data, family="binomial")# logistic model to test differences in value by site
+dredge(Sauger_out_nest, trace=2)
+
 
 proc.time()-ptm
 # summary(Sauger_out)
