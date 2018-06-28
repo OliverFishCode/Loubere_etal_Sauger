@@ -55,35 +55,39 @@ remove(se, percentile)# cleans up work environment to point
 
 
 
-#################logistic outside##############
+#################Generalized linear mixed effects model (binomial distribution, Logit link) for outside movement##############
 options(na.action = "na.fail")   #  prevent fitting models to different datasets
-Sauger_out_idr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
-dredge(Sauger_out_idr, trace=2)
-Sauger_out_ycr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
-dredge(Sauger_out_ycr, trace=2)
-Sauger_out_nest =  glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass/id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
-dredge(Sauger_out_nest, trace=2)
+# Sauger_out_idr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
+# dredge(Sauger_out_idr, trace=2)
+# Sauger_out_nest =  glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass/id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
+# dredge(Sauger_out_nest, trace=2)
+Sauger_full_outside = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model 
+dredge(Sauger_full_outside, trace=2)
+outside_movement =  glmer(outside ~ age + origin + pool + age*pool +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))
+summary(outside_movement)
+sum_temp = summary(outside_movement)
+outside_sum = data.frame(outside_movement)
+temp_eemeans = emmeans(outside_movement,"age", by="pool")# creats marginal means object
+tukey_pairwise_outside = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
+cld_sum = cld(temp_eemeans)
+plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model, throws minor  error in ploting
 
-#################logistic inside##############
-options(na.action = "na.fail")   #  prevent fitting models to different datasets
-Sauger_out_idr = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "optimx",optCtrl=list(method= "L-BFGS-B", maxfun=100000)))# logistic model to test differences in value by site
-dredge(Sauger_out_idr, trace=2)
-Sauger_out_ycr = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "optimx",optCtrl=list(method= "L-BFGS-B", maxfun=100000)))# logistic model to test differences in value by site
-dredge(Sauger_out_ycr, trace=2)
-Sauger_out_nest =  glm(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin, data=logistic_data, family="binomial")# logistic model to test differences in value by site
-dredge(Sauger_out_nest, trace=2)
+#################generalized linear model (binomial distribution, Logit link) for inside movement ##############
+# Sauger_out_idr = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "optimx",optCtrl=list(method= "L-BFGS-B", maxfun=100000)))# logistic model to test differences in value by site
+# dredge(Sauger_out_idr, trace=2)
+# Sauger_out_ycr = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "optimx",optCtrl=list(method= "L-BFGS-B", maxfun=100000)))# logistic model to test differences in value by site
+# dredge(Sauger_out_ycr, trace=2)
+Sauger_full_inside =  glm(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin, data=logistic_data, family="binomial")# logistic model 
+dredge(Sauger_full_inside, trace=2)
+inside_movement = glm(inside ~ age + origin + pool + age*origin + age*pool, data=logistic_data, family="binomial")
+summary(inside_movement)
+sum_temp = summary(inside_movement)
+inside_sum = data.frame(sum_temp$coefficients)
 
-
+remove(Sauger_full_inside,Sauger_full_outside,inside_movement,outside_movement,sum_temp)
 proc.time()-ptm
-# summary(Sauger_out)
-# sum_temp = summary(Sauger_out)
-# logistic_sum_out = data.frame(sum_temp$coefficients)
 
-#################logistic inside##############
-# Sauger_in = glmer(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id)+(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
-# summary(Sauger_in)
-# sum_temp = summary(Sauger_in)
-# logistic_sum_in = data.frame(sum_temp$coefficients)
+
 
 # #########compare multi-comp outcomes#######
 # plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
