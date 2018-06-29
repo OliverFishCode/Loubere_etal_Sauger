@@ -84,19 +84,13 @@ summary(inside_movement)
 sum_temp = summary(inside_movement)
 inside_sum = data.frame(sum_temp$coefficients)
 
+temp_eemeans = emmeans(inside_movement,"age", by="pool")# creats marginal means object
+tukey_pairwise_outside = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
+cld_sum = cld(temp_eemeans)
+plot(temp_eemeans, comparisons =TRUE)
+
 remove(Sauger_full_inside,Sauger_full_outside,inside_movement,outside_movement,sum_temp)
 proc.time()-ptm
-
-
-
-# #########compare multi-comp outcomes#######
-# plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
-# plot(temp_eemeans2, comparisons =TRUE)# Pairwise comaparisons plot for the temporal autocorrelation linear model
-# cld(temp_eemeans)# compact letter display (tukey groupings) for basic linear model
-# cld(temp_eemeans2)# compact letter display (tukey groupings) for temporal autocorrelation linear model
-# remove(temp_eemeans2,temp_eemeans,temporal_CL_lm,Sr_temporal_lm,temp_sum)# cleans up work environment to point
-
-
 
 
 # #####Prediction Intervals for otolith to water- response(use response scaled) and link scale#######
