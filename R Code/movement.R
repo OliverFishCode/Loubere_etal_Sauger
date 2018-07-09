@@ -55,7 +55,7 @@ remove(se, percentile)# cleans up work environment to point
 
 
 
-#################Generalized linear mixed effects model (binomial distribution, Logit link) for outside movement##############
+#################Generalized linear mixed effects model (binomial distribution, Logit link) random effect yearclass for outside movement##############
 options(na.action = "na.fail")   #  prevent fitting models to different datasets
 # Sauger_out_idr = glmer(outside ~ pool + origin + age+ age*pool+ pool*origin +age*origin +(1|id), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))# logistic model to test differences in value by site
 # dredge(Sauger_out_idr, trace=2)
@@ -92,7 +92,7 @@ plot(temp_eemeans, comparisons =TRUE)
 
 remove(Sauger_full_inside,Sauger_full_outside,sum_temp)
 
-######Prediction Intervals for inside movement- response(use response scaled) and link scale#######
+######Prediction Intervals for inside movement- response(use response scaled) and link scale- dont worry how these were calculated#######
 preds_outside = merTools::predictInterval(outside_movement, level = 0.95, n.sims = 1000, stat = "mean",type = "probability")
 
 ######Prediction Intervals for inside movement- response(use response scaled) and link scale#######

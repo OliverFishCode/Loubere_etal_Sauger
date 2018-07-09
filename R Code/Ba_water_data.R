@@ -83,25 +83,25 @@ Bartlett_Homogen_knowns = data.frame(K, P_B)# puts homogeniety test into datafra
 colnames(Bartlett_Homogen_knowns) = c("K","P")# give variables logical names
 remove(P,W,temp_norm,temp_var,K,P_B)# cleans up work environment to point
 
-#################Water Linear Model- includes f-test for overall model##############
-Ba_site_lm = glm(value ~ site, Ba_data, family = gaussian(link = "log"))  # linear model to test differences in value by site
-summary(Ba_site_lm)# prints summary of linear coefficients and significance 
-lm_summary =broom::tidy(Ba_site_lm)# summary in a pretty dataframe
-glm_sum = summary(Ba_site_lm)# creates summary variable
-resid_df = as.numeric(glm_sum$df.residual)# extracts and creates residual df variable
-null_df = as.numeric(glm_sum$df.null)# extracts and creates model df variable
-msr = (glm_sum$null.deviance - glm_sum$deviance)/(null_df - resid_df)# calculates mean square regression
-mse = glm_sum$deviance/resid_df# calculates mean square error
-Model_F_stat = msr/mse# calculates F value
-P_or_F = data.frame(2 * pf(q=Model_F_stat, df1=(null_df - resid_df), df2=(resid_df), lower.tail=FALSE))# 2-tail probability of F
-Model_F_test_lm = data.frame(Model_F_stat,P_or_F)# puts F test in dataframe
-CL_lm = broom::confint_tidy(Ba_site_lm, conf.level=0.95)# 95% clm on linear coefficients
-temp_eemeans = emmeans(Ba_site_lm,"site")# creats marginal means object
-tukey_pairwise_lm = broom::tidy(contrast(temp_eemeans, method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
-lm_summary = data.frame(lm_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
-remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,CL_lm, Ba_site_lm)# cleans up work environment to point
+# #################Water Linear Model- includes f-test for overall model##############
+# Ba_site_lm = glm(value ~ site, Ba_data, family = gaussian(link = "log"))  # linear model to test differences in value by site
+# summary(Ba_site_lm)# prints summary of linear coefficients and significance 
+# lm_summary =broom::tidy(Ba_site_lm)# summary in a pretty dataframe
+# glm_sum = summary(Ba_site_lm)# creates summary variable
+# resid_df = as.numeric(glm_sum$df.residual)# extracts and creates residual df variable
+# null_df = as.numeric(glm_sum$df.null)# extracts and creates model df variable
+# msr = (glm_sum$null.deviance - glm_sum$deviance)/(null_df - resid_df)# calculates mean square regression
+# mse = glm_sum$deviance/resid_df# calculates mean square error
+# Model_F_stat = msr/mse# calculates F value
+# P_or_F = data.frame(2 * pf(q=Model_F_stat, df1=(null_df - resid_df), df2=(resid_df), lower.tail=FALSE))# 2-tail probability of F
+# Model_F_test_lm = data.frame(Model_F_stat,P_or_F)# puts F test in dataframe
+# CL_lm = broom::confint_tidy(Ba_site_lm, conf.level=0.95)# 95% clm on linear coefficients
+# temp_eemeans = emmeans(Ba_site_lm,"site")# creats marginal means object
+# tukey_pairwise_lm = broom::tidy(contrast(temp_eemeans, method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
+# lm_summary = data.frame(lm_summary,CL_lm)# combines linear coeffecient summary and CLM into same dataframe
+# remove(glm_sum,P_or_F,Model_F_stat,msr,mse,null_df,resid_df,CL_lm, Ba_site_lm)# cleans up work environment to point
 
-#######Water Linear Mixed Model with AR(1) R-side error correction########
+#######Generalized least squares fit linear  model with AR(1)R-side error correction by year and month nested within year########
 Ba_temporal_lm = gls(value ~ site, correlation = corAR1(form = ~1|year/month) , data = ar1)# linear model to test differences in value by site
 temp_sum = summary(Ba_temporal_lm)# prints summary of linear coefficients and significance 
 temporal_summary = data.frame(temp_sum$tTable)
@@ -111,14 +111,14 @@ tukey_pairwise_temporal_site = broom::tidy(contrast(temp_eemeans2, method="pairw
 temporal_summary = data.frame(temporal_summary,temporal_CL_lm)# combines linear coeffecient summary and CLM into same dataframe
 
 #########compare multi-comp outcomes#######
-plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
+# plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model
 plot(temp_eemeans2, comparisons =TRUE)# Pairwise comaparisons plot for the temporal autocorrelation linear model
-cld(temp_eemeans)# compact letter display (tukey groupings) for basic linear model
+# cld(temp_eemeans)# compact letter display (tukey groupings) for basic linear model
 cld(temp_eemeans2)# compact letter display (tukey groupings) for temporal autocorrelation linear model
-remove(temp_eemeans2,temp_eemeans,temporal_CL_lm,Ba_temporal_lm,temp_sum)# cleans up work environment to point
+remove(temp_eemeans2,temporal_CL_lm,Ba_temporal_lm,temp_sum)# cleans up work environment to point
 
 
-#################Knowns (water otolith relationship) Linear Model- includes f-test for overall model##############
+#################General linear model distribution = gaussian link = log, Knowns (water otolith relationship) Linear Model- includes f-test for overall model##############
 Ba_oto_water = glm(otolith ~ water, data = Ba_reg_data, family = gaussian(link = "log"))# linear model to test differences in value by site
 summary(Ba_oto_water)# prints summary of linear coefficients and significance 
 reg_summary =broom::tidy(Ba_oto_water)# summary in a pretty dataframe

@@ -43,7 +43,7 @@ levenetest_origin = leveneTest(loglin_data$count,loglin_data$origin) #levene hom
 levenetest_pool = leveneTest(loglin_data$count,loglin_data$pool) #levene test is used instead of bartletts because its robust to non-normal data
 
 
-#################loglinear Linear Model- includes f-test for overall model##############
+#################loglinear Model distribution = poisson link = log - includes f-test for overall model##############
 Sauger_loglin = glm(count ~ pool + origin + origin*pool, loglin_data, family="poisson")# linear model to test differences in value by site
 Sauger_null = glm(count ~ 1, loglin_data,family="poisson")
 loglin_sim = simulateResiduals(Sauger_loglin,refit = T, n=99)
