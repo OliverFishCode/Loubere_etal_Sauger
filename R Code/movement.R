@@ -66,10 +66,11 @@ dredge(Sauger_full_outside, trace=2)
 outside_movement =  glmer(outside ~ age + origin + pool + age*pool +(1|yearclass), data=logistic_data, family="binomial",control=glmerControl(optimizer= "bobyqa",optCtrl=list(maxfun=100000)))
 summary(outside_movement)
 sum_temp = summary(outside_movement)
-outside_sum = data.frame(outside_movement)
+outside_sum = data.frame(sum_temp$coefficients)
+
 temp_eemeans = emmeans(outside_movement,"age", by="pool")# creats marginal means object
 tukey_pairwise_outside = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
-cld_sum = cld(temp_eemeans)
+cld_sum_outside = cld(temp_eemeans)
 plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic linear model, throws minor  error in ploting
 
 #################generalized linear model (binomial distribution, Logit link) for inside movement ##############
@@ -79,42 +80,33 @@ plot(temp_eemeans, comparisons =TRUE)# Pairwise comaparisons plot for the basic 
 # dredge(Sauger_out_ycr, trace=2)
 Sauger_full_inside =  glm(inside ~ pool + origin + age+ age*pool+ pool*origin +age*origin, data=logistic_data, family="binomial")# logistic model 
 dredge(Sauger_full_inside, trace=2)
-inside_movement = glm(inside ~ age + origin + pool + age*origin + age*pool, data=logistic_data, family="binomial")
+inside_movement = glm(inside ~ age + origin + pool + age*pool, data=logistic_data, family="binomial")
 summary(inside_movement)
 sum_temp = summary(inside_movement)
 inside_sum = data.frame(sum_temp$coefficients)
 
 temp_eemeans = emmeans(inside_movement,"age", by="pool")# creats marginal means object
-tukey_pairwise_outside = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
-cld_sum = cld(temp_eemeans)
+tukey_pairwise_inside = broom::tidy(contrast(temp_eemeans, by= "pool",method="pairwise", adjust = "tukey" ))# tukeys pairwise tests in dataframe
+cld_sum_inside = cld(temp_eemeans)
 plot(temp_eemeans, comparisons =TRUE)
 
-remove(Sauger_full_inside,Sauger_full_outside,inside_movement,outside_movement,sum_temp)
+remove(Sauger_full_inside,Sauger_full_outside,sum_temp)
+
+######Prediction Intervals for inside movement- response(use response scaled) and link scale#######
+preds_outside = merTools::predictInterval(outside_movement, level = 0.95, n.sims = 1000, stat = "mean",type = "probability")
+
+######Prediction Intervals for inside movement- response(use response scaled) and link scale#######
+preds_link = predict( inside_movement, type = "link", se.fit = TRUE)# use the knowns regression to make predictions from  5th and 95th percentile water, also provides  std. error
+critval <- 1.96 # critical value for approx 95% CI
+upr <- preds_link$fit + (critval * preds_link$se.fit)# estimate upper CI for prediction
+lwr <- preds_link$fit - (critval * preds_link$se.fit)# estimate lower CI for prediction
+fit <- preds_link$fit# returns fited value
+lwr2 <-inside_movement$family$linkinv(upr)
+upr2 <-inside_movement$family$linkinv(lwr)
+fit2 <-inside_movement$family$linkinv(fit)
+preds_link = data.frame(fit2,lwr2,upr2, logistic_data$id, logistic_data$age, logistic_data$yearclass, logistic_data$origin, logistic_data$pool)# puts predictions, CI, site 
+colnames(preds_link) = c("Prediction","LCL", "UCL","ID","Age","Year_class","Origin","Pool")# give variables logical names
+preds_inside = arrange(preds_link,Pool,Origin,Year_class,Age)# sorts data set by site,month,year
+
+remove(fit,lwr,upr)# cleans up work environment
 proc.time()-ptm
-
-
-# #####Prediction Intervals for otolith to water- response(use response scaled) and link scale#######
-# oto_inverse =  data.frame(x$linkfun(SR_reg_data$otolith))
-# colnames(oto_inverse) = c("inverse_oto")# give variables logical names
-# SR_reg_data = data.frame(SR_reg_data, oto_inverse)
-# preds_link = predict.glm( Sr_oto_water, newdata = SR_reg_data, type = "link", se.fit = TRUE)# use the knowns regression to make predictions from  5th and 95th percentile water, also provides  std. error
-# critval <- 1.96 # critical value for approx 95% CI
-# upr <- preds_link$fit + (critval * preds_link$se.fit)# estimate upper CI for prediction
-# lwr <- preds_link$fit - (critval * preds_link$se.fit)# estimate lower CI for prediction
-# fit <- preds_link$fit# returns fited value
-# lwr2 <-Sr_oto_water$family$linkinv(upr)
-# upr2 <-Sr_oto_water$family$linkinv(lwr)
-# fit2 <-Sr_oto_water$family$linkinv(fit)
-# preds_link = data.frame(fit2,lwr2,upr2,fit,lwr,upr,SR_reg_data$site, SR_reg_data$water, SR_reg_data$otolith)# puts predictions, CI, site ,and measured otolith and water values in a single dataframe
-# colnames(preds_link) = c("Prediction","LCL", "UCL","Link_Prediction","Link_LCL", "Link_UCL", "Site","Water","Otolith")# give variables logical names
-# preds_link = arrange(preds_link, Prediction,Water)# sorts data set by site,month,year
-# plot(otolith~water, SR_reg_data)# plots measured water and otolith values on link scale
-# lines(preds_link$Water,preds_link$Prediction, col="red",lty=2,lwd=3)# adds fitted line
-# lines(preds_link$Water,preds_link$LCL,col="blue",lty=2,lwd=3)# adds LCL line
-# lines(preds_link$Water,preds_link$UCL,  col="blue",lty=2,lwd=3)# adds UCL line
-# plot(inverse_oto~water, SR_reg_data)# plots measured water and otolith values on link scale
-# lines(preds_link$Water,preds_link$Link_Prediction, col="red",lty=2,lwd=3)# adds fitted line
-# lines(preds_link$Water,preds_link$Link_LCL,col="blue",lty=2,lwd=3)# adds LCL line
-# lines(preds_link$Water,preds_link$Link_UCL,  col="blue",lty=2,lwd=3)# adds UCL line
-# remove(x, critval,fit,lwr,r2,upr)# cleans up work environment
-# 
